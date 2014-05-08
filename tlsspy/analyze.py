@@ -26,6 +26,10 @@ class Analyzer(object):
             TRUST_STORE.add_trust_from_ca_file(options.CAfile)
 
     def analyze(self, address, certificates):
+        log.info('Starting analysis on {0} with {1} certificates provided'.format(
+            address,
+            len(certificates),
+        ))
         if not isinstance(certificates, OrderedSet):
             certificates = OrderedSet(certificates)
 

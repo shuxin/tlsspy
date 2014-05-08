@@ -59,7 +59,7 @@ class RetrieveCertificate(Probe):
         except socket.error, e:
             raise Probe.Skip('Network error: {0}'.format(e))
 
-        log.info('Fetched {0} certifiates from {1}:{2}'.format(
+        log.info('Fetched {0} certificates from {1}:{2}'.format(
             len(certificates),
             address[0],
             address[1],
