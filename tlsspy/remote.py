@@ -62,7 +62,7 @@ def parse_address(address, port=0, protocol='tcp', family=socket.AF_INET,
 
     if isinstance(address, basestring):
         if ':' in address:
-            parsed_host, parsed_port = address.split(':', 1)
+            parsed_host, port = address.split(':', 1)
         else:
             parsed_host = address
             parsed_port = port

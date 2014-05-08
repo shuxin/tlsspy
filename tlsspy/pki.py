@@ -97,11 +97,17 @@ class Sequence(object):
         :return: PEM encoded sequence
         '''
         name = name or self.__class__.__name__.upper()
-        data = []
-        data.append('-----BEGIN {0}-----'.format(name))
-        data.append(der_encoder.encode(self.sequence).encode('base64').rstrip())
-        data.append('-----END {0}-----'.format(name))
-        return '\n'.join(data)
+        try:
+            data = []
+            data.append('-----BEGIN {0}-----'.format(name))
+            data.append(der_encoder.encode(self.sequence).encode('base64').rstrip())
+            data.append('-----END {0}-----'.format(name))
+            return '\n'.join(data)
+        except Exception as error:
+            log.error('Failed to encode {0}: {1}'.format(
+                name,
+                error,
+            ))
 
 
 class Certificate(Sequence):
@@ -139,7 +145,7 @@ class Certificate(Sequence):
         :return: :class:`Extension` object
         '''
         return Extension(
-            self.sequence['tbsCertificate']['extensions'][index]
+            self.tbsCertificate.getComponentByName('extensions')[index]
         )
 
     def get_extensions(self):
@@ -160,11 +166,7 @@ class Certificate(Sequence):
                     ))
                     extension = None
                 except Exception as error:
-                    log.error('Failed to parse extension {0}: {1}'.format(
-                        i,
-                        error,
-                    ))
-                    extension = None
+                    raise
 
                 if extension is not None:
                     extensions[extension.name] = extension
@@ -280,7 +282,7 @@ class Certificate(Sequence):
         :return: human readable signature algorithm
         '''
         signature = self.sequence.getComponentByName('signatureAlgorithm')
-        algorithm = signature['algorithm']
+        algorithm = signature.getComponentByName('algorithm')
         return friendly_oid(algorithm)
 
     def get_signature_der(self):
@@ -408,7 +410,7 @@ class PublicKey(Sequence):
     def __init__(self, sequence):
         super(PublicKey, self).__init__(sequence)
 
-        algorithm = self.sequence.getComponentByName('algorithm')['algorithm']
+        algorithm = self.sequence.getComponentByName('algorithm').getComponentByName('algorithm')
         self.algorithm = x509.ID_KA_MAP.get(algorithm)
 
         if self.algorithm is None:
@@ -512,8 +514,8 @@ class Extension(Sequence):
     def __init__(self, sequence):
         self.sequence = sequence
 
-        self.name = friendly_oid(self.sequence['extnID'])
-        self.critical = bool(self.sequence['critical']._value)
+        self.name = friendly_oid(self.sequence.getComponentByName('extnID'))
+        self.critical = bool(self.sequence.getComponentByName('critical')._value)
 
         log.debug('Parsing extension {0}'.format(self.name))
         if self.name in self._decoders:
