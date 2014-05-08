@@ -380,6 +380,10 @@ class Certificate(Sequence):
         >>> issuer.verify(victim)
         True
         '''
+        log.debug('{0} verify {1}'.format(
+            self,
+            certificate,
+        ))
         # Don't bother verifying if we're not a CA certificate
         if not self.is_ca:
             log.debug('Attempted to verify from non-CA certificate')
