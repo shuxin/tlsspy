@@ -182,7 +182,7 @@ class ProtocolSupport(Probe):
         :arg version: version tuple, consisting of (``major``, ``minor``)
                       version numbers
         '''
-        log.debug('Testing TLS/SSL version 0x{:02x}{:02x}'.format(*version))
+        log.debug('Testing TLS/SSL version 0x{0:02x}{1:02x}'.format(*version))
         chello = ClientHello()
         chello.client_version = version
         chello.random = get_random_bytes(32)
