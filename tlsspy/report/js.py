@@ -8,8 +8,8 @@ from tlsspy.report.base import Report
 class JSONReport(Report):
     report_type = 'json'
 
-    def render(self, results):
-        fd = self.open()
+    def render(self, results, output):
+        fd = self.open(output)
         json.dump(
             results,
             fd,

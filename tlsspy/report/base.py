@@ -163,19 +163,18 @@ class Report(object):
     def register(cls, report):
         cls.report_types[report.report_type] = report
 
-    def render(self, results):
+    def render(self, results, output):
         raise NotImplementedError()
 
-    def open(self, encoding='ascii'):
-        log.debug('opening report {0}'.format(
-            self.filename,
-        ))
-        if self.filename and self.filename != '-':
-            return codecs.open(self.filename, 'wb', encoding)
+    def open(self, directory, encoding='ascii'):
+        path = os.path.join(directory, self.filename)
+        log.debug('opening report {0}'.format(path))
+        if path and self.filename != '-':
+            return codecs.open(path, 'wb', encoding)
         else:
             return sys.stdout
 
 
-def make_report(report_type, address, result):
+def make_report(report_type, output, address, result):
     report = Report.report_types[report_type](address)
-    report.render(result)
+    report.render(result, output)

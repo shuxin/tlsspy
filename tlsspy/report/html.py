@@ -8,7 +8,7 @@ from tlsspy.report.base import Report
 class HTMLReport(Report):
     report_type = 'html'
 
-    def render(self, results):
+    def render(self, results, output):
         env = Environment(
             loader=PackageLoader('tlsspy', 'report')
         )
@@ -48,7 +48,7 @@ class HTMLReport(Report):
             errors=errors,
             warnings=warnings,
         )
-        fd = self.open('utf_8')
+        fd = self.open(output, 'utf_8')
         fd.write(rendered)
 
 
