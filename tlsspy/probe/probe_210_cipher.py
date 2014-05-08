@@ -21,7 +21,7 @@ def get_cipher_info(cipher):
     name = TLS_CIPHER_SUITE[cipher]
     info = dict(zip(TLS_CIPHER_SUITE_HEAD,
                     TLS_CIPHER_SUITE_INFO[cipher]))
-    info['hex'] = '0x{:04x}'.format(cipher)
+    info['hex'] = '0x{0:04x}'.format(cipher)
 
     if info['key_exchange'] == 'ECDHE':
         info['forward_secrecy'] = u'ECDH 256 bits (&asymp; RSA 3072 bits)'
