@@ -5,6 +5,8 @@ import sys
 
 def run():
     import argparse
+    import traceback
+
     from tlsspy.analyze import Analyzer
     from tlsspy.config import configure
     from tlsspy.remote import parse_address
@@ -43,7 +45,8 @@ def run():
             log.error('Uncaught exception during run: {0}'.format(
                 error,
             ))
-            raise
+            for line in traceback.format_exc().splitlines():
+                log.error(line)
 
 
 if __name__ == '__main__':
