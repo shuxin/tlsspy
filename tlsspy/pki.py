@@ -154,7 +154,16 @@ class Certificate(Sequence):
                 try:
                     extension = self.get_extension(i)
                 except Warning as message:
-                    log.info('Failed to parse extension: {0}'.format(w))
+                    log.info('Failed to parse extension {0}: {1}'.format(
+                        i,
+                        message,
+                    ))
+                    extension = None
+                except Exception as error:
+                    log.error('Failed to parse extension {0}: {1}'.format(
+                        i,
+                        error,
+                    ))
                     extension = None
 
                 if extension is not None:
