@@ -3,10 +3,10 @@ import math
 from pyasn1.type import namedtype, tag, univ
 
 from tlsspy.log import log
-from tlsspy.util import (
+from tlsspy.calc import (
     bytes_to_long,
-    num_bytes,
     long_to_bytes,
+    num_bytes,
     pow_mod,
 )
 

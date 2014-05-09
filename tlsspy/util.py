@@ -1,8 +1,8 @@
 from collections import OrderedDict, MutableSet
 import datetime
-import math
 import os
 import Queue
+import string
 import threading
 
 from pyasn1.codec.der import decoder as der_decoder
@@ -46,6 +46,31 @@ def get_random_bytes(size):
     b = bytearray(os.urandom(size))
     assert len(b) == size
     return b
+
+
+def pad_hex(value, pad_size=2, separator=':'):
+    '''
+    Hexadecimal representation of a number with added padding.
+
+    >>> print pad_hex(1234)
+    04:d2
+    >>> print pad_hex(12345)
+    30:39
+    >>> print pad_hex(12345678901234567890, pad_size=4)
+    ab54:a98c:eb1f:0ad2
+    '''
+    encoded = '{0:x}'.format(value)
+    while len(encoded) % pad_size > 0:
+        encoded = '0{}'.format(encoded)
+
+    return ':'.join(encoded[i:i + pad_size]
+                    for i in xrange(0, len(encoded), pad_size))
+
+def pad_binary(value):
+    encoded = []
+    for char in value:
+        encoded.append(char if char in string.printable else '.')
+    return ''.join(encoded)
 
 
 class OrderedSet(MutableSet):
@@ -219,122 +244,3 @@ class ThreadPool(object):
                 results.put(result)
             finally:
                 jobs.task_done()
-
-
-def bytes_to_long(b):
-    '''
-    Convert a byte sequence to its long value.
-
-    >>> bytes_to_long('\x42\x2a')
-    16938L
-    '''
-    total = 0L
-    multi = 1L
-    for count in range(len(b) - 1, -1, -1):
-        value = b[count]
-        total += multi * value
-        multi <<= 8
-    return total
-
-
-def long_to_bytes(n, limit=None):
-    '''
-    Convert a long value to a byte sequence in big endian.
-
-    >>> long_to_bytes(16938)
-    bytearray('B*')
-    >>> long_to_bytes(16938, 1)
-    bytearray('*')
-    '''
-    if limit == None:
-        limit = num_bytes(n)
-
-    b = bytearray(limit)
-    for count in range(limit - 1, -1, -1):
-        b[count] = int(n % 256)
-        n >>= 8
-    return b
-
-
-def num_bits(n):
-    r'''
-    Returns the number of bits used to generated number ``n``. Calculates:
-
-    .. math::
-        \log(n, 2) - 1
-    '''
-    if n == 0:
-        return 0
-    else:
-        s = '{0:x}'.format(n)
-        return ((len(s) - 1) * 4) + {
-            '0': 0, '1': 1, '2': 2, '3': 2,
-            '4': 3, '5': 3, '6': 3, '7': 3,
-        }.get(s[0], 4)
-
-
-def num_bytes(n):
-    r'''
-    Returns the number of bytes used to generate number ``n``. Calculates:
-
-    .. math::
-        \providecommand{\ceil}[1]{\left \lceil #1 \right \rceil }
-        \ceil{(log(n, 2) - 1)/8}
-    '''
-    if n == 0:
-        return 0
-    else:
-        bits = num_bits(n)
-        return int(math.ceil(bits / 8.0))
-
-
-def inv_mod(a, b):
-    '''
-    Inverse of :math:`a \mod b` using the Extended Euclidean Algorithm:
-
-    .. math::
-        ax + by = \gcd(a, b)
-    '''
-    c, d = a, b
-    uc, ud = 1, 0
-
-    while c != 0:
-        q = d // c
-        c, d = d - (q * c), c
-        uc, ud = ud - (q * uc), uc
-
-    if d == 1:
-        return ud % b
-    else:
-        return 0
-
-
-def pow_mod(b, p, m):
-    '''
-    Power with modulus.
-
-    :arg b: base
-    :arg p: power
-    :arg m: modulus
-
-    For :math:`p < 0`:
-
-    .. math::
-        (b^p \mod m) \pmod m
-
-    For :math:`p >= 0`:
-
-    .. math::
-        b^p \mod m
-    '''
-    if has_gmpy:
-        b = gmpy.mpz(b)
-        p = gmpy.mpz(p)
-        m = gmpy.mpz(m)
-        return long(pow(b, p, m))
-
-    elif p < 0:
-        return inv_mod(pow(b, p, m), m)
-
-    else:
-        return pow(b, p, m)

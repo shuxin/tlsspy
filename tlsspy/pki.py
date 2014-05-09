@@ -8,6 +8,7 @@ from pyasn1.type import univ
 
 from tlsspy.asn1_models import (
     dsa,
+    ec,
     rsa,
     ocsp,
     x509,
@@ -16,6 +17,7 @@ from tlsspy.asn1_models import (
 from tlsspy.crypto import md2, ripemd160
 from tlsspy.log import log
 from tlsspy.oids import friendly_oid
+from tlsspy.util import pad_binary, pad_hex
 
 
 def parse_pem(obj, marker):
@@ -269,7 +271,7 @@ class Certificate(Sequence):
         '''
         :return: certificate serial number
         '''
-        self.tbsCertificate.getComponentByName('serialNumber').to_python()
+        return self.tbsCertificate.getComponentByName('serialNumber').to_python()
 
     def get_signature(self):
         '''
@@ -333,6 +335,9 @@ class Certificate(Sequence):
 
     def get_subject_str(self):
         return self.tbsCertificate.getComponentByName('subject').to_rfc2253()
+
+    def get_version(self):
+        return self.tbsCertificate.getComponentByName('version').to_python()
 
     @property
     def is_ca(self):
@@ -415,18 +420,30 @@ class PublicKey(Sequence):
         super(PublicKey, self).__init__(sequence)
 
         algorithm = self.sequence.getComponentByName('algorithm').getComponentByName('algorithm')
+        log.debug('Parsing {0} ({1}) public key'.format(
+            friendly_oid(algorithm),
+            str(algorithm),
+        ))
         self.algorithm = x509.ID_KA_MAP.get(algorithm)
 
         if self.algorithm is None:
             raise TypeError('Unable to handle {0} keys'.format(str(algorithm)))
 
         key_bits = self.sequence.getComponentByName('subjectPublicKey')
+        key_parm = self.sequence.getComponentByName('algorithm').getComponentByName('parameters')
         key_type = self.get_type()
 
         if key_type == 'DSA':
-            self.key, _ = self._get_DSA_public_key(key_bits)
+            self.key, _ = self._get_DSA_public_key(key_bits, key_parm)
+
         elif key_type == 'RSA':
             self.key, _ = self._get_RSA_public_key(key_bits)
+
+        elif key_type == 'EC':
+            self.key, _ = self._get_EC_public_key(key_bits, key_parm)
+
+    def get_algorithm(self):
+        return self.algorithm
 
     def get_bits(self):
         '''
@@ -454,9 +471,7 @@ class PublicKey(Sequence):
         )
 
         if key_type == 'DSA':
-            key_info.update(dict(
-                modulus='{:x}'.format(self.key._value),
-            ))
+            return self.key.get_info()
 
         elif key_type == 'RSA':
             key_info.update(dict(
@@ -476,15 +491,22 @@ class PublicKey(Sequence):
             )
         )
 
-    def _get_DSA_public_key(self, key_bits):
-        key = dsa.DSAPublicKey()
+    def _get_DSA_public_key(self, key_bits, key_parameters):
         pub = key_bits.to_bytes()
-        return der_decoder.decode(pub, asn1Spec=key)
+        key, _ = der_decoder.decode(pub, asn1Spec=dsa.DSAPublicKey())
+        return key.set_parameters(key_parameters), _
 
     def _get_RSA_public_key(self, key_bits):
         key = rsa.RSAPublicKey()
         pub = key_bits.to_bytes()
         return der_decoder.decode(pub, asn1Spec=key)
+
+    def _get_EC_public_key(self, key_bits, key_parm):
+        key_data = key_bits.to_bytes()
+        parameters, _ = der_decoder.decode(key_parm, asn1Spec=ec.ECParameters())
+        named_curve = parameters.getComponentByName('namedCurve')
+        if named_curve._value:
+            return ec.ECNamedCurve(named_curve, key_data), None
 
     def verify(self, signature, value, signature_algorithm):
         '''
@@ -522,8 +544,8 @@ class Extension(Sequence):
         self.critical = bool(self.sequence.getComponentByName('critical')._value)
 
         log.debug('Parsing extension {0}'.format(self.name))
+        self.encoded = self.sequence.getComponentByName('extnValue')._value
         if self.name in self._decoders:
-            self.encoded = self.sequence.getComponentByName('extnValue')._value
             self.decoded = der_decoder.decode(
                 self.encoded,
                 asn1Spec=self._decoders[self.name]
@@ -534,6 +556,24 @@ class Extension(Sequence):
             self.decoded = None
 
         self.parsed = self.to_python()
+
+    def __str__(self):
+        value = self.to_python()
+        if isinstance(value, basestring):
+            try:
+                value = int(value, 16)
+                return pad_hex(value)
+            except ValueError:
+                return value
+
+        elif hasattr(value, 'iteritems'):
+            return ', '.join('{0}:{1}'.format(k, v) for k, v in value.iteritems())
+
+        elif hasattr(value, '__iter__'):
+            return ', '.join(map(str, value))
+
+        else:
+            return repr(value)
 
     def get(self, key, default=None):
         return self.parsed.get(key, default)
@@ -546,10 +586,9 @@ class Extension(Sequence):
             return self.parsed
         else:
             if self.decoded is None:
-                return None
+                return pad_binary(self.encoded)
             else:
                 try:
                     return self.decoded.to_python()
                 except AttributeError, e:
-                    log.error('Oops: {0}'.format(e))
                     return None

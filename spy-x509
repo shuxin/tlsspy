@@ -1,0 +1,138 @@
+#!/usr/bin/env python2
+
+import sys
+import warnings
+
+from tlsspy.calc import bytes_to_long
+from tlsspy.util import pad_hex
+
+
+def print_hex(value, indent, width):
+    padded = pad_hex(value)
+    indent = ' ' * indent
+    while padded:
+        print '{0}{1}'.format(
+            indent,
+            padded[:width]
+        )
+        padded = padded[width:]
+
+
+def print_certificate(certificate, filename, index):
+    print 'Certificate: {0} (index {1})'.format(
+        filename,
+        index,
+    )
+    print '    Data:'
+    print '        Version: {0} (0x{0:x})'.format(
+        certificate.get_version(),
+    )
+    print '        Serial: {0}'.format(
+        pad_hex(certificate.get_serial_number()),
+    )
+    print '        Issuer: {0}'.format(
+        certificate.get_issuer_str(),
+    )
+    print '    Validity:'
+    print '        Not before: {0}'.format(
+        certificate.get_not_before(),
+    )
+    print '        Not after: {0}'.format(
+        certificate.get_not_after(),
+    )
+    print '    Subject: {0}'.format(
+        certificate.get_subject_str(),
+    )
+    sys.stdout.flush()
+    public_key = certificate.get_public_key()
+    print '    Subject Public Key:'
+    print '        Type: {0} bits {1}'.format(
+        public_key.get_bits(),
+        public_key.get_type(),
+    )
+
+    if public_key.get_type() == 'DSA':
+        print '        Pub:'
+        print_hex(public_key.key.get_pub(), 12, 51)
+        print '        P:'
+        print_hex(public_key.key.get_p(), 12, 51)
+        print '        Q:'
+        print_hex(public_key.key.get_q(), 12, 51)
+        print '        G:'
+        print_hex(public_key.key.get_g(), 12, 51)
+
+    if public_key.get_type() == 'RSA':
+        print '        Exponent: {0} (0x{0:x})'.format(
+            public_key.key.get_exponent(),
+        )
+        print '        Modulus:'
+        modulus = bytes_to_long(
+            bytearray(public_key.key.get_modulus())
+        )
+        print_hex(modulus, 12, 51)
+
+    if public_key.get_type() == 'EC':
+        print '        Named Curve: {0}'.format(
+            public_key.key.get_name(),
+        )
+
+        point = public_key.key.get_point()
+        if point is not None:
+            print '        Point:'
+            print '           X:'
+            print_hex(point['x'], 16, 48)
+            print '           Y:'
+            print_hex(point['y'], 16, 48)
+            print '           Z:'
+            print_hex(point['z'], 16, 48)
+
+    print '    Extensions:'
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for name, extension in certificate.get_extensions().iteritems():
+            if extension.critical:
+                print '        {0}: critical'.format(
+                    name
+                )
+            else:
+                print '        {0}:'.format(
+                    name
+                )
+            print '            {0}'.format(
+                extension,
+            )
+    print '    Signature Algorithm: {0}'.format(
+        certificate.get_signature_algorithm(),
+    )
+
+    signature = bytes_to_long(
+        bytearray(certificate.get_signature())
+    )
+    print_hex(signature, 8, 54)
+
+
+def run():
+    import argparse
+
+    from tlsspy.log import log
+    from tlsspy.pki import parse_pem, parse_certificate
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--quiet', action='store_true', default=False)
+    parser.add_argument('files', nargs='+')
+
+    options = parser.parse_args()
+
+    if options.quiet:
+        log.quiet()
+
+    for filename in options.files:
+        for i, substrate in enumerate(
+                parse_pem(file(filename).read(), 'CERTIFICATE')
+            ):
+            certificate = parse_certificate(substrate)
+            print_certificate(certificate, filename, i)
+
+
+if __name__ == '__main__':
+    sys.exit(run())

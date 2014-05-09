@@ -241,3 +241,169 @@ class NetscapeCertType(univ.BitString):
 
 class NetscapeComment(DirectoryString):
     pass
+
+
+class IA5StringSequence(univ.SequenceOf):
+    componentType = char.IA5String()
+
+
+class HashAlgAndValue(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('hashAlg', AlgorithmIdentifier()),
+        namedtype.NamedType('hashValue', univ.OctetString()),
+    )
+
+
+class LogotypeDetails(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('mediaType', char.IA5String()),
+        namedtype.NamedType('logotypeHash', HashAlgAndValue()),
+        namedtype.NamedType('logotypeURI', IA5StringSequence())
+    )
+
+
+class LogotypeImageType(univ.Integer):
+    namedValues = namedval.NamedValues(
+        ('grayScale', 0),
+        ('color', 1)
+    )
+
+
+class LogotypeImageResolution(univ.Choice):
+    componentType = namedtype.NamedTypes(
+        namedtype.DefaultedNamedType('numBits', univ.Integer()),
+        namedtype.DefaultedNamedType('tableSize', univ.Integer())
+    )
+
+
+class LogotypeImageInfo(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.DefaultedNamedType('type', LogotypeImageType('color')),
+        namedtype.NamedType('fileSize', univ.Integer()),
+        namedtype.NamedType('xSize', univ.Integer()),
+        namedtype.NamedType('ySize', univ.Integer()),
+        namedtype.OptionalNamedType('resolution', LogotypeImageResolution()),
+        namedtype.OptionalNamedType('language', char.IA5String())
+    )
+
+class LogotypeImage(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType(
+            'imageDetails',
+            LogotypeDetails().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+            )
+        ),
+        namedtype.OptionalNamedType(
+            'imageInfo',
+            LogotypeImageInfo().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+            )
+        ),
+    )
+
+
+class LogotypeImageSequence(univ.SequenceOf):
+    componentType = LogotypeImage()
+
+
+class LogotypeAudioInfo(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('fileSize', univ.Integer()),
+        namedtype.NamedType('playTime', univ.Integer()),
+        namedtype.NamedType('channels', univ.Integer()),
+        namedtype.OptionalNamedType('sampleRate', univ.Integer()),
+        namedtype.OptionalNamedType('language', char.IA5String())
+    )
+
+
+class LogotypeAudio(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType(
+            'audioDetails',
+            LogotypeDetails().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+            )
+        ),
+        namedtype.OptionalNamedType(
+            'audioInfo',
+            LogotypeAudioInfo().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+            )
+        )
+    )
+
+
+class LogotypeAudioSequence(univ.SequenceOf):
+    componentType = LogotypeAudio()
+
+
+class LogotypeData(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('image', LogotypeImageSequence()),
+        namedtype.OptionalNamedType('audio', LogotypeAudioSequence())
+    )
+
+
+class LogotypeReference(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('refStructHash', HashAlgAndValue()),
+        namedtype.NamedType('refStructURI', char.IA5String())
+    )
+
+
+class LogotypeInfo(univ.Choice):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType(
+            'direct',
+            LogotypeData().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+            )
+        ),
+        namedtype.NamedType(
+            'indirect',
+            LogotypeReference().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+            )
+        )
+    )
+
+
+class LogotypeInfoSequence(univ.SequenceOf):
+    componentType = LogotypeInfo()
+
+
+class OtherLogotypeInfo(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType('logotypeType', univ.ObjectIdentifier()),
+        namedtype.NamedType('info', LogotypeInfo())
+    )
+
+
+class LogotypeExtn(univ.Sequence):
+    componentType = namedtype.NamedTypes(
+        # namedtype.OptionalNamedType(
+        #     'communityLogos',
+        #     LogotypeInfoSequence().subtype(
+        #         explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+        #     )
+        # ),
+        namedtype.OptionalNamedType(
+            'issuerLogo',
+            LogotypeInfo().subtype(
+                explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+            )
+        ),
+        # namedtype.OptionalNamedType(
+        #     'subjectLogo',
+        #     LogotypeInfo().subtype(
+        #         explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2)
+        #     )
+        # ),
+        # namedtype.OptionalNamedType(
+        #     'otherLogos',
+        #     OtherLogotypeInfo().subtype(
+        #         explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 3)
+        #     )
+        # ),
+    )

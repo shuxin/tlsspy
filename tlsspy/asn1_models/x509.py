@@ -23,7 +23,7 @@ from tlsspy.parser import extension, generic
 #             Certificate Revocation List (CRL) Profile
 
 # Upper bounds
-MAX                                      = 128
+MAX                                      = 1024
 ub_name                                  = univ.Integer(32768)
 ub_common_name                           = univ.Integer(64)
 ub_locality_name                         = univ.Integer(128)
@@ -63,6 +63,19 @@ ub_x121_address_length                   = univ.Integer(16)
 # Object identifiers
 id_ka_dsa                        = univ.ObjectIdentifier('1.2.840.10040.4.1')
 id_ka_dsa_with_sha1              = univ.ObjectIdentifier('1.2.840.10040.4.3')
+ecdsa_with_sha1                  = univ.ObjectIdentifier('1.2.840.10045.1')
+id_prime_field                   = univ.ObjectIdentifier('1.2.840.10045.1.1')
+id_characteristic_two_field      = univ.ObjectIdentifier('1.2.840.10045.1.2')
+key_type                         = univ.ObjectIdentifier('1.2.840.10045.2')
+ec_publickey                     = univ.ObjectIdentifier('1.2.840.10045.2.1')
+signatures                       = univ.ObjectIdentifier('1.2.840.10045.4')
+id_field_type                    = univ.ObjectIdentifier('1.2.840.10045.4.1')
+ecdsa_with_recommended           = univ.ObjectIdentifier('1.2.840.10045.4.2')
+ecdsa_with_sha2                  = univ.ObjectIdentifier('1.2.840.10045.4.3')
+ecdsa_with_sha224                = univ.ObjectIdentifier('1.2.840.10045.4.3.1')
+ecdsa_with_sha256                = univ.ObjectIdentifier('1.2.840.10045.4.3.2')
+ecdsa_with_sha384                = univ.ObjectIdentifier('1.2.840.10045.4.3.3')
+ecdsa_with_sha512                = univ.ObjectIdentifier('1.2.840.10045.4.3.4')
 id_ka_rsa                        = univ.ObjectIdentifier('1.2.840.113549.1.1.1')
 id_ka_md2_with_rsa               = univ.ObjectIdentifier('1.2.840.113549.1.1.2')
 id_ka_md5_with_rsa               = univ.ObjectIdentifier('1.2.840.113549.1.1.4')
@@ -210,6 +223,12 @@ ID_KA_MAP = {
     id_ka_md2_with_rsa:  'RSA+MD2',
     id_ka_md5_with_rsa:  'RSA+MD5',
     id_ka_sha1_with_rsa: 'RSA+SHA1',
+    ec_publickey:        'EC',
+    ecdsa_with_sha1:     'ECDSA+SHA1',
+    ecdsa_with_sha224:   'ECDSA+SHA224',
+    ecdsa_with_sha256:   'ECDSA+SHA256',
+    ecdsa_with_sha384:   'ECDSA+SHA384',
+    ecdsa_with_sha512:   'ECDSA+SHA512',
 }
 
 ID_KP_MAP = {
@@ -417,6 +436,7 @@ class Version(univ.Integer):
     namedValues = namedval.NamedValues(
         ('v1', 0), ('v2', 1), ('v3', 2)
     )
+    to_python = lambda self: self._value
 
 
 class TBSCertificate(univ.Sequence):
